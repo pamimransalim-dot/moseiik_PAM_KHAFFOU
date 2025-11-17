@@ -14,6 +14,8 @@ use threadpool::ThreadPool;
 use threadpool_scope::scope_with;
 
 #[derive(Debug, Parser)]
+
+/// structure pour stocker largeur/hauteur des tiles 
 struct Size {
     width: u32,
     height: u32,
@@ -58,6 +60,7 @@ pub struct Options {
     pub num_thread: usize,
 }
 
+/// Compte le nombre d'images disponibles dans le dossier des tiles
 fn count_available_tiles(images_folder: &str) -> i32 {
     match fs::read_dir(images_folder) {
         Ok(t) => return t.count() as i32,
@@ -65,6 +68,7 @@ fn count_available_tiles(images_folder: &str) -> i32 {
     };
 }
 
+/// Charge toutes les tiles du dossier, les redimensionne à la bonne taille et renvoie un `Vec<RgbImage>`.
 fn prepare_tiles(
     images_folder: &str,
     tile_size: &Size,
@@ -105,6 +109,7 @@ fn prepare_tiles(
             tiles.lock().unwrap()[index] = tile;
         });
     }
+    // On attend la fin de tous les threads du pool
     pool.join();
 
     println!(
@@ -142,7 +147,7 @@ unsafe fn l1_x86_avx2(im1: &RgbImage, im2: &RgbImage) -> i32 {
 
     let mut result: i32 = 0;
 
-    for i in (0..nb_sub_pixel - stride).step_by(stride) {
+    for i in (0..=nb_sub_pixel - stride).step_by(stride) {
         // Get pointer to data
         let p_im1: *const __m256i =
             std::mem::transmute::<*const u8, *const __m256i>(std::ptr::addr_of!(im1[i as usize]));
@@ -198,7 +203,7 @@ unsafe fn l1_x86_sse2(im1: &RgbImage, im2: &RgbImage) -> i32 {
 
     let mut result: i32 = 0;
 
-    for i in (0..nb_sub_pixel - stride).step_by(stride) {
+    for i in (0..=nb_sub_pixel - stride).step_by(stride) {
         // Get pointer to data
         let p_im1: *const __m128i =
             std::mem::transmute::<*const u8, *const __m128i>(std::ptr::addr_of!(im1[i as usize]));
@@ -437,6 +442,7 @@ fn main() {
     let args = Options::parse();
     compute_mosaic(args);
 }
+/* 
 
 #[cfg(test)]
 mod tests {
@@ -457,5 +463,202 @@ mod tests {
     fn unit_test_generic() {
         // TODO
         assert!(true);
+    }
+}
+*/
+
+#[cfg(test)]
+mod tests {
+   
+    use super::*;
+    use image::ImageReader;
+
+    fn create_simple_image(width: u32, height: u32, value: u8) -> RgbImage {
+        let mut img = RgbImage::new(width, height);
+        for pixel in img.pixels_mut() {
+            // ici je mets rgb à la même valeur pour faciliter mon calcul à la main 
+            *pixel = image::Rgb([value, value, value]);
+        }
+        img
+    }
+
+    #[test]
+    fn test_l1_generic_valeur_connue() {
+        // ici je crée 2 images de même taille et à valeur de pixel constant
+        let im1 = create_simple_image(2, 2, 0);
+        let im2 = create_simple_image(2, 2, 10);
+        // donc distance L1 = 4 * 3 * |10 - 0| = 120
+        let distance = l1_generic(&im1, &im2);
+        assert_eq!(distance, 120);
+    }
+
+    /// ici on teste la fonction avec la meilleure implémentation (SIMD ou générique)
+    /// mais le résultat doit être le même que `l1_generic`
+    
+    #[test]
+    fn test_l1_wrapper_egal_a_l1_generic() {
+        let im1 = create_simple_image(4, 4, 5);
+        let im2 = create_simple_image(4, 4, 20);
+
+        let attendu = l1_generic(&im1, &im2);
+
+        // alternative 1 : on n'active PAS le SIMD
+        let d_sans_simd = l1(&im1, &im2, false, false);
+        assert_eq!(d_sans_simd, attendu);
+
+        // alternative 2 : on active le SIMD 
+        // si simd n'est pas disponible, l1 retombera sur l'implémentation générique donc dans TOUS les cas le résultat doit être le même
+        let d_avec_simd = l1(&im1, &im2, true, false);
+        assert_eq!(d_avec_simd, attendu);
+    }
+
+   
+
+// a l'execution j'ai eu cette echec : 
+//failures:
+//---- main::tests::test_l1_simd_x86_egal_generic stdout ----
+//thread 'main::tests::test_l1_simd_x86_egal_generic' panicked at src\main.rs:531:17:
+//assertion `left == right` failed
+//left: 4800
+//right: 5760
+//note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+// solution : modifications de for i in (0..nb_sub_pixel - stride).step_by(stride) en for i in (0..=nb_sub_pixel - stride).step_by(stride) dans les fonction l1_x86_avx2 ,l1_x86_sse2 qui permet de traiter le dernier bloc de 32octets oublié
+
+    #[test]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    fn test_l1_simd_x86_egal_generic() {
+        // Cette fonction est fournie par la lib standard : elle permet de savoir si le processeur supporte AVX2 / SSE2.
+        use std::arch::is_x86_feature_detected;
+
+        let im1 = create_simple_image(8, 8, 0);
+        let im2 = create_simple_image(8, 8, 30);
+
+        let attendu = l1_generic(&im1, &im2);
+
+        unsafe {
+            // ici si AVX2, on teste l1_x86_avx2
+            if is_x86_feature_detected!("avx2") {
+                let d_avx2 = l1_x86_avx2(&im1, &im2);
+                assert_eq!(d_avx2, attendu);
+            }
+
+            // ici si ona SSE2, on teste l1_x86_sse2
+            if is_x86_feature_detected!("sse2") {
+                let d_sse2 = l1_x86_sse2(&im1, &im2);
+                assert_eq!(d_sse2, attendu);
+            }
+        }
+    }
+
+    
+    #[test]
+    #[cfg(target_arch = "aarch64")]
+    fn test_l1_neon_egal_generic() {
+        use std::arch::is_aarch64_feature_detected;
+
+        let im1 = create_simple_image(8, 8, 0);
+        let im2 = create_simple_image(8, 8, 30);
+
+        let attendu = l1_generic(&im1, &im2);
+
+        unsafe {
+            if is_aarch64_feature_detected!("neon") {
+                let d_neon = l1_neon(&im1, &im2);
+                assert_eq!(d_neon, attendu);
+            }
+        }
+    }
+
+   
+
+   
+    /// Idée du test : on appelle directement prepare_tiles ,ensuite on  vérifie qu'on a bien au moins UNE tile, et aprés on vérifie que toutes les tiles ont la bonne taille (tile_size)
+    ///  et enfin on vérifie que le nombre de tiles correspond au nombre de fichiers
+    #[test]
+    fn test_prepare_tiles_sur_assets_tiles_small() {
+
+        let tiles_folder = "assets/tiles-small";
+        let tile_size = Size {
+            width: 5,
+            height: 5,
+        };
+
+        // on call la fonction à tester ; Si echec un message clair
+        let tiles = prepare_tiles(tiles_folder, &tile_size, false)
+            .expect("prepare_tiles a lamentablement loseeeeeeeeeeee (dossier assets/tiles-small manquant ?)");
+
+        assert!(!tiles.is_empty(),"Aucune tile chargéeeeeee "
+        );
+
+        // Chaque tile a la bonne taille 
+        for tile in &tiles {
+            assert_eq!(tile.width(), tile_size.width);
+            assert_eq!(tile.height(), tile_size.height);
+        }
+
+        //nombre d'éléments renvoyés = nombre de fichiers trouvés dans le dossier?
+        let nb_compte_par_fonction = count_available_tiles(tiles_folder);
+        assert_eq!(tiles.len() as i32,nb_compte_par_fonction,"nombre d'éléments renvoyés != nombre de fichiers trouvés dans le dossier");
+    }
+
+    
+    /// Idée du test  :on lit l'image originale pour connaître sa taille ,ensuite calcule "à la main" la taille attendue après scaling de 2 + rognage et enfin on vérifie que `prepare_target` renvoie bien cette taille
+    #[test]
+    fn test_prepare_target_scale_2() {
+        let image_path = "assets/target-small.png";
+
+        // On lit l'image d'origine 
+        let original = ImageReader::open(image_path)
+            .expect("Impossible d'ouvrir assets/target-small.png")
+            .decode()
+            .unwrap()
+            .into_rgb8();
+
+        let scale = 2;
+        let tile_size = Size {
+            width: 5,
+            height: 5,
+        };
+
+        // Taille after scaling sans rogner 
+        let scaled_w = original.width() * scale;
+        let scaled_h = original.height() * scale;
+
+        // taille apreés rogne (qui doit etre un multile de tile_size)
+        let expected_w = scaled_w - (scaled_w % tile_size.width);
+        let expected_h = scaled_h - (scaled_h % tile_size.height);
+
+        let prepared = prepare_target(image_path, scale, &tile_size).expect("prepare_target a échoué");
+
+        //  dimensions = dimensions calculé
+        assert_eq!(prepared.width(), expected_w);
+        assert_eq!(prepared.height(), expected_h);
+
+        // dimensions = dimensions multiple de tile_size
+        assert_eq!(prepared.width() % tile_size.width, 0);
+        assert_eq!(prepared.height() % tile_size.height, 0);
+    }
+
+
+    /// test sur prepare_target pour scale = 1
+    #[test]
+    fn test_prepare_target_scale_1_multiple_de_tile() {
+        let image_path = "assets/target-small.png";
+
+        let tile_size = Size {
+            width:5,
+            height:5,
+        };
+
+        let prepared =
+            prepare_target(image_path, 1, &tile_size).expect("prepare_target a échoué");
+
+        // l'image n'est pas vide !
+        assert!(prepared.width() > 0);
+        assert!(prepared.height() > 0);
+
+        // taille multiple de 5
+        assert_eq!(prepared.width() % tile_size.width, 0);
+        assert_eq!(prepared.height() % tile_size.height, 0);
     }
 }
