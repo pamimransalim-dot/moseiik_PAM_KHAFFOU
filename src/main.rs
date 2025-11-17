@@ -147,7 +147,7 @@ unsafe fn l1_x86_avx2(im1: &RgbImage, im2: &RgbImage) -> i32 {
 
     let mut result: i32 = 0;
 
-    for i in (0..=nb_sub_pixel - stride).step_by(stride) {
+    for i in (0..nb_sub_pixel - stride).step_by(stride) {
         // Get pointer to data
         let p_im1: *const __m256i =
             std::mem::transmute::<*const u8, *const __m256i>(std::ptr::addr_of!(im1[i as usize]));
@@ -203,7 +203,7 @@ unsafe fn l1_x86_sse2(im1: &RgbImage, im2: &RgbImage) -> i32 {
 
     let mut result: i32 = 0;
 
-    for i in (0..=nb_sub_pixel - stride).step_by(stride) {
+    for i in (0..nb_sub_pixel - stride).step_by(stride) {
         // Get pointer to data
         let p_im1: *const __m128i =
             std::mem::transmute::<*const u8, *const __m128i>(std::ptr::addr_of!(im1[i as usize]));
@@ -530,19 +530,19 @@ mod tests {
         // Cette fonction est fournie par la lib standard : elle permet de savoir si le processeur supporte AVX2 / SSE2.
         use std::arch::is_x86_feature_detected;
 
-        let im1 = create_simple_image(8, 8, 0);
-        let im2 = create_simple_image(8, 8, 30);
+        let im1 = create_simple_image(5, 5, 0);
+        let im2 = create_simple_image(5, 5, 30);
 
         let attendu = l1_generic(&im1, &im2);
 
         unsafe {
-            // ici si AVX2, on teste l1_x86_avx2
+            // on teste l1_x86_avx2
             if is_x86_feature_detected!("avx2") {
                 let d_avx2 = l1_x86_avx2(&im1, &im2);
                 assert_eq!(d_avx2, attendu);
             }
 
-            // ici si ona SSE2, on teste l1_x86_sse2
+            // on teste l1_x86_sse2
             if is_x86_feature_detected!("sse2") {
                 let d_sse2 = l1_x86_sse2(&im1, &im2);
                 assert_eq!(d_sse2, attendu);
@@ -573,7 +573,7 @@ mod tests {
 
    
     /// Idée du test : on appelle directement prepare_tiles ,ensuite on  vérifie qu'on a bien au moins UNE tile, et aprés on vérifie que toutes les tiles ont la bonne taille (tile_size)
-    ///  et enfin on vérifie que le nombre de tiles correspond au nombre de fichiers
+    ///  et enfin on vérifie que  nombre de tiles = nombre de fichiers
     #[test]
     fn test_prepare_tiles_sur_assets_tiles_small() {
 
@@ -602,7 +602,7 @@ mod tests {
     }
 
     
-    /// Idée du test  :on lit l'image originale pour connaître sa taille ,ensuite calcule "à la main" la taille attendue après scaling de 2 + rognage et enfin on vérifie que `prepare_target` renvoie bien cette taille
+    /// Idée du test  :on lit l'image originale pour connaître sa taille ,ensuite calcule à la main la taille attendue après scaling de 2 + rognage et enfin on vérifie que `prepare_target` renvoie bien cette taille
     #[test]
     fn test_prepare_target_scale_2() {
         let image_path = "assets/target-small.png";
