@@ -1,0 +1,32 @@
+name: CI Moseiik
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ci-matrix:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --platform ${{ matrix.platform }} \
+            -t moseiik:${{ matrix.platform }} .
+
+      - name: Run tests in Docker
+        run: |
+          docker run --rm \
+            --platform ${{ matrix.platform }} \
+            moseiik:${{ matrix.platform }}
