@@ -1,5 +1,13 @@
+name: CI Moseiik PAM & SOUKAYNA
+
+on:
+  push: #ici on a choisi de lancer CI sur un push pour détecter les erreurs immédiatement et ne  pas cassés la branche main 
+
+  pull_request: # ce choix car permet de re-vérifie le code valide la branche avant de la fusionner 
+
 jobs:
-  ci-matrix:
+  build-and-test:
+    name: Build & Test 
     runs-on: ubuntu-latest
 
     strategy:
@@ -7,26 +15,25 @@ jobs:
         platform: [linux/amd64, linux/arm64]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4 #un peu comme equivalence de notre gitclone
 
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    
+      - name:  QEMU 
+        uses: docker/setup-qemu-action@v3   #QEMU  est nécessaire pour exécuter du ARM sur un serveur x86 (GitHub Actions), donc  Sans ça, impossible d’exécuter une image ARM
 
-      - name: Setup QEMU (arm64 only)
-        if: matrix.platform == 'linux/arm64'
-        uses: docker/setup-qemu-action@v3
+      
+      - name:  Buildx
+        uses: docker/setup-buildx-action@v3 # Buildxl'outil qui permet de faire du multi-architecture
+
+      - name:  Docker image
+        uses: docker/build-push-action@v5
         with:
-          platforms: arm64
+          context: .
+          platforms: ${{ matrix.platform }}
+          push: false                       # mais on NE pousse PAS l’image 
+          load: true                        # load: true = car cela permet de charge localement l'image pour le docker run
+          tags: moseiik:test
 
-      - name: Build Docker image
-        run: |
-          docker build \
-            --platform ${{ matrix.platform }} \
-            -t moseiik:${{ matrix.platform }} .
-
-      - name: Run tests
-        run: |
-          docker run --rm \
-            --platform ${{ matrix.platform }} \
-            moseiik:${{ matrix.platform }}
+      - name: Run tests 
+        run: docker run --rm moseiik:test
