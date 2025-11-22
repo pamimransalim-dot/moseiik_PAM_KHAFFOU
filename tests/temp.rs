@@ -25,7 +25,7 @@ mod tests {
         let args = main::Options {
             image: "assets/kit.jpeg".to_string(),
             output: output.to_string(),
-            tiles: "assets/base_image".to_string(),
+            tiles: "assets/images".to_string(),
             scaling: 1,
             tile_size: 25,
             remove_used: false,
@@ -49,7 +49,7 @@ mod tests {
         let args = main::Options {
             image: "assets/kit.jpeg".to_string(),
             output: output.to_string(),
-            tiles: "assets/base_image".to_string(),
+            tiles: "assets/images".to_string(),
             scaling: 1,
             tile_size: 5,
             remove_used: false,
@@ -72,7 +72,7 @@ mod tests {
         let args = main::Options {
             image: "assets/kit.jpeg".to_string(),
             output: output.to_string(),
-            tiles: "assets/base_image".to_string(),
+            tiles: "assets/images".to_string(),
             scaling: 1,
             tile_size: 25,
             remove_used: false,

@@ -18,6 +18,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4 #un peu comme equivalence de notre gitclone
 
+
+      - name: Download tiles    # On préfère télécharger les vignettes dans le CI plutôt que dans le Dockerfile pour éviter que chaque build Docker télécharge 4000 images, ce qui serait très lent et non reproductible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl unzip                
+          curl -L "https://nasext-vaader.insa-rennes.fr/ietr-vaader/moseiik_test_images.zip" -o moseiik_test_images.zip
+          unzip moseiik_test_images.zip -d assets
+          rm moseiik_test_images.zip
     
       - name:  QEMU 
         uses: docker/setup-qemu-action@v3   #QEMU  est nécessaire pour exécuter du ARM sur un serveur x86 (GitHub Actions), donc  Sans ça, impossible d’exécuter une image ARM
