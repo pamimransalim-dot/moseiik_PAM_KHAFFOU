@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-test:
-    name: Build & Test 
+    name: Build & Test (${{ matrix.platform }})
     runs-on: ubuntu-latest
 
     strategy:
@@ -31,7 +31,7 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          push: false                       # mais on NE pousse PAS l’image 
+          push: false                       # nous ne poussons pas l'image, elle est seulement construite localement pour être exécutée dans l'étape suivante 
           load: true                        # load: true = car cela permet de charge localement l'image pour le docker run
           tags: moseiik:test
 
