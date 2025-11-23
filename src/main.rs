@@ -556,8 +556,8 @@ mod tests {
     fn test_l1_neon_egal_generic() {
         use std::arch::is_aarch64_feature_detected;
 
-        let im1 = create_simple_image(8, 8, 0);
-        let im2 = create_simple_image(8, 8, 30);
+        let im1 = create_simple_image(5, 5, 0);
+        let im2 = create_simple_image(5, 5, 30);
 
         let attendu = l1_generic(&im1, &im2);
 

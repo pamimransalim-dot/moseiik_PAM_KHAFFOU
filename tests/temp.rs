@@ -51,7 +51,7 @@ mod tests {
             output: output.to_string(),
             tiles: "assets/images".to_string(),
             scaling: 1,
-            tile_size: 5,
+            tile_size: 25,
             remove_used: false,
             verbose: false,
             simd: true,     // simd neon
