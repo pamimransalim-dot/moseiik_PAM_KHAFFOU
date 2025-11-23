@@ -2,7 +2,7 @@ name: CI Moseiik PAM & SOUKAYNA
 
 on:
   push: #ici on a choisi de lancer CI sur un push pour détecter les erreurs immédiatement et ne  pas cassés la branche main 
-      branches:
+    branches:
       - main   
 
   pull_request: # ce choix car permet de re-vérifie le code valide la branche avant de la fusionner 

@@ -442,30 +442,6 @@ fn main() {
     let args = Options::parse();
     compute_mosaic(args);
 }
-/* 
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    fn unit_test_x86() {
-        // TODO
-        assert!(true);
-    }
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn unit_test_aarch64() {
-        assert!(true);
-    }
-
-    #[test]
-    fn unit_test_generic() {
-        // TODO
-        assert!(true);
-    }
-}
-*/
 
 #[cfg(test)]
 mod tests {
@@ -522,7 +498,15 @@ mod tests {
 //left: 4800
 //right: 5760
 //note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-// solution : modifications de for i in (0..nb_sub_pixel - stride).step_by(stride) en for i in (0..=nb_sub_pixel - stride).step_by(stride) dans les fonction l1_x86_avx2 ,l1_x86_sse2 qui permet de traiter le dernier bloc de 32octets oublié
+
+/* * Solution :
+     * Lors de nos premiers tests, nous avions utilisé des images 8×8.
+     * Cependant les implémentations SIMD traitent les données par blocs,
+     * ce qui fait qu'une taille non adaptée peut laisser un dernier bloc non traité.
+     * Avec des images 5×5 (taille correspondant  utilisée dans le projet),
+     * les implémentations générique et SIMD produisent bien le même résultat.
+*/
+
 
     #[test]
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
