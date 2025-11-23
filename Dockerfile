@@ -1,4 +1,4 @@
-FROM rust:1.79-slim
+FROM rust:1.81-slim
 WORKDIR /app
 
 # Copier tout le projet (code + Cargo + assets + tests)
